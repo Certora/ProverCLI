@@ -1,0 +1,11 @@
+version = 1
+
+# SPDX headers live in source files (*.py). This blanket annotation covers
+# everything else (configs, docs, lockfiles, data) so `reuse lint` passes
+# without sprinkling license headers across non-source files. File-level
+# headers take precedence where present (precedence = "aggregate").
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Certora Ltd."
+SPDX-License-Identifier = "GPL-3.0-only"
