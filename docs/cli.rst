@@ -13,7 +13,7 @@ The CLI is installed automatically with the package:
 
 .. code-block:: bash
 
-   pip install git+https://github.com/Certora/ProverCLI.git
+   pip install prover-cli
 
 Verify:
 
@@ -271,8 +271,8 @@ Environment Variables
 
 .. envvar:: CERTORAKEY
 
-   Certora API key. Used when ``cert_cli_login`` cookies are not present
-   (e.g. CI service accounts).
+   **Deprecated.** Legacy Certora API key. Authentication now uses ``cert_cli_login``
+   cookie login (interactive) or AWS SigV4 in CI; ``CERTORAKEY`` should not be relied on.
 
 .. envvar:: PROVER_OUTPUT_CACHE_DIR
 
@@ -291,8 +291,6 @@ If the CLI reports an authentication failure, refresh your session:
 .. code-block:: bash
 
    cert_cli_login
-
-Or set ``CERTORAKEY`` in your environment.
 
 Local Mode Limitations
 ----------------------

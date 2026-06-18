@@ -15,9 +15,14 @@ sys.path.insert(0, os.path.abspath('../src'))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ProverCLI'
-copyright = '2024, Certora'
+copyright = '2026, Certora'
 author = 'Certora'
-release = '0.1.0'
+try:
+    from importlib.metadata import version as _v
+    release = _v("prover-cli")
+except Exception:
+    release = "0.0.0"
+version = release
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -64,7 +69,7 @@ autodoc_typehints_description_target = 'documented'
 # Mock imports for dependencies not needed for documentation
 # This allows docs to build without installing heavy dependencies
 autodoc_mock_imports = [
-    'certora_cli_login',
+    'certora_login',
     'boto3',
     'botocore',
 ]

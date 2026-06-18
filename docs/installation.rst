@@ -4,76 +4,56 @@ Installation
 Requirements
 ------------
 
-- Python 3.10 or higher
+- Python 3.12 or higher
 - pip package manager
 
-Local Development Installation
--------------------------------
+Install from PyPI
+-----------------
 
-To install this package locally for development:
-
-.. code-block:: bash
-
-   # Clone the repository
-   git clone https://github.com/Certora/ProverCLI.git
-   cd ProverCLI
-
-   # Install in editable mode (recommended for development)
-   pip install -e .
-
-   # Or install without editable mode
-   pip install .
-
-The editable mode (``-e``) allows you to make changes to the code and have them immediately reflected without reinstalling.
-
-Installing in Another Project
-------------------------------
-
-To use this package in another Python project, you can install it directly from the git repository:
+The package is published on PyPI as ``prover-cli``:
 
 .. code-block:: bash
 
-   # Install from GitHub via HTTPS
-   pip install git+https://github.com/Certora/ProverCLI.git
+   pip install prover-cli
 
-   # Install a specific branch or tag
-   pip install git+https://github.com/Certora/ProverCLI.git@branch-name
+The Python import package is ``prover_output_utility`` (e.g.
+``from prover_output_utility import ProverOutputAPI``).
 
-Using requirements.txt
-^^^^^^^^^^^^^^^^^^^^^^
-
-Add to your project's ``requirements.txt``:
+Using requirements.txt / pyproject.toml
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: text
 
-   git+https://github.com/Certora/ProverCLI.git
-
-Using pyproject.toml
-^^^^^^^^^^^^^^^^^^^^
-
-Add to your ``pyproject.toml``:
+   # requirements.txt
+   prover-cli
 
 .. code-block:: toml
 
+   # pyproject.toml
    dependencies = [
-       "prover-output-utility @ git+https://github.com/Certora/ProverCLI.git",
+       "prover-cli",
    ]
+
+Install from source (development)
+---------------------------------
+
+.. code-block:: bash
+
+   git clone https://github.com/Certora/ProverCLI.git
+   cd ProverCLI
+   pip install -e .          # editable install
+
+The editable mode (``-e``) reflects code changes without reinstalling.
 
 Development Dependencies
 ------------------------
-
-To install development dependencies for testing and documentation:
 
 .. code-block:: bash
 
    pip install -e .[dev]
 
-This includes:
-
-- pytest for testing
-- sphinx for documentation
-- black and isort for code formatting
-- mypy for type checking
+This includes ``build`` (packaging) and ``reuse`` (license-header linting). The test suite lives in
+the `ProverOutputUtility <https://github.com/Certora/ProverOutputUtility>`_ repository.
 
 Verifying Installation
 ----------------------

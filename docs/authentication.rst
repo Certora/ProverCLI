@@ -6,11 +6,11 @@ ProverCLI uses ``cert_cli_login`` for authentication with the Certora Prover API
 Setup
 -----
 
-1. **Install Certora CLI** (if not already installed):
+1. **Install ProverCLI** (the ``certora_login`` tooling ships with it via the ``certora-cloud`` dependency — no separate install needed):
 
    .. code-block:: bash
 
-      pip install certora-cli
+      pip install prover-cli
 
 2. **Login using cert_cli_login**:
 
@@ -107,25 +107,22 @@ Example GitHub Actions workflow:
      verify:
        runs-on: ubuntu-latest
        steps:
-         - uses: actions/checkout@v2
+         - uses: actions/checkout@v4
 
          - name: Set up Python
-           uses: actions/setup-python@v2
+           uses: actions/setup-python@v5
            with:
-             python-version: '3.10'
+             python-version: '3.12'
 
          - name: Install dependencies
-           run: |
-             pip install certora-cli
-             pip install git+https://github.com/Certora/ProverCLI.git
-
-         - name: Authenticate
-           run: cert_cli_login
-           env:
-             CERTORA_KEY: ${{ secrets.CERTORA_KEY }}
+           run: pip install prover-cli
 
          - name: Run verification
            run: python verify_script.py
+           env:
+             # In CI, authentication uses AWS SigV4 via the runner's configured
+             # AWS credentials (no interactive login / API key needed).
+             CI: "true"
 
 Checking Current User
 ---------------------
