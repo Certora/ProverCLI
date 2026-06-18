@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 """
-Example usage of ProverOutputUtility API.
+Example usage of ProverCLI API.
 """
 
 import os
@@ -16,7 +16,7 @@ from .prover_api import ProverOutputAPI
 
 def main() -> None:
     """
-    Example usage of the ProverOutputUtility API.
+    Example usage of the ProverCLI API.
     """
     # Check if CERTORAKEY is set
     if not os.getenv("CERTORAKEY"):

@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 """
-Command line interface for ProverOutputUtility.
+Command line interface for ProverCLI.
 Comprehensive CLI that provides full access to Certora Prover job data.
 """
 

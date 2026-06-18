@@ -218,8 +218,7 @@ except AuthenticationError:
 
 ## Development
 
-This repository holds the library/CLI code. The test suite lives in the
-[ProverOutputUtility](https://github.com/Certora/ProverOutputUtility) repository.
+This repository holds the library/CLI code; the test suite is maintained separately.
 
 ### Code Quality
 

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 """
-ProverOutputUtility - Python API for parsing Certora Prover outputs.
+ProverCLI - Python API for parsing Certora Prover outputs.
 
 This module provides an easy-to-use API for fetching and parsing outputs from the Certora Prover.
 Supports both job URLs and job IDs as input.

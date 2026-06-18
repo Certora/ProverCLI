@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 """
-Custom exceptions for ProverOutputUtility.
+Custom exceptions for ProverCLI.
 """
 
 

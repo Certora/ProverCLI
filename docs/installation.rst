@@ -52,8 +52,7 @@ Development Dependencies
 
    pip install -e .[dev]
 
-This includes ``build`` (packaging) and ``reuse`` (license-header linting). The test suite lives in
-the `ProverOutputUtility <https://github.com/Certora/ProverOutputUtility>`_ repository.
+This includes ``build`` (packaging) and ``reuse`` (license-header linting).
 
 Verifying Installation
 ----------------------
