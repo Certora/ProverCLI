@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "certora-prover-cli"
+dynamic = ["version"]
+description = "A Python API and CLI for parsing outputs from the Certora Prover"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [
+    {name = "Certora", email = "support@certora.com"},
+]
+maintainers = [
+    {name = "Certora", email = "support@certora.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "requests>=2.28.0",
+    "urllib3>=1.26.0",
+    "certora-cloud>=0.1.0",
+    "boto3>=1.26.0",
+    "pycryptodome>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.0",
+    "reuse>=5.0",
+]
+
+[project.scripts]
+prover-cli = "prover_output_utility.prover_cli:main"
+prover-group-summary = "prover_output_utility.group_summary:main"
+
+[project.urls]
+Homepage = "https://github.com/Certora/ProverCLI"
+Repository = "https://github.com/Certora/ProverCLI"
+"Bug Tracker" = "https://github.com/Certora/ProverCLI/issues"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/prover_output_utility/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prover_output_utility"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/prover_output_utility"]
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 100
