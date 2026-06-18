@@ -218,7 +218,7 @@ except AuthenticationError:
 
 ## Development
 
-This repository holds the library/CLI code; the test suite is maintained separately.
+This repository holds the library/CLI code.
 
 ### Code Quality
 

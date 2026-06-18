@@ -3,8 +3,7 @@ ProverCLI Documentation
 
 A Python API and CLI for parsing outputs from the Certora Prover. This utility provides an easy-to-use interface for fetching and parsing prover verification results using either job URLs or job IDs.
 
-Distributed on PyPI as ``prover-cli``; the Python import package is ``prover_output_utility``. This
-repository holds the library/CLI only; the test suite is maintained separately.
+Distributed on PyPI as ``prover-cli``; the Python import package is ``prover_output_utility``.
 
 .. image:: https://github.com/Certora/ProverCLI/workflows/CI/badge.svg
    :target: https://github.com/Certora/ProverCLI/actions
