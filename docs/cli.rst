@@ -271,7 +271,7 @@ Environment Variables
 
 .. envvar:: CERTORAKEY
 
-   **Deprecated.** Legacy Certora API key. Authentication now uses ``cert_cli_login``
+   **Deprecated.** Legacy Certora API key. Authentication now uses ``certora_login``
    cookie login (interactive) or AWS SigV4 in CI; ``CERTORAKEY`` should not be relied on.
 
 .. envvar:: PROVER_OUTPUT_CACHE_DIR
@@ -290,7 +290,7 @@ If the CLI reports an authentication failure, refresh your session:
 
 .. code-block:: bash
 
-   cert_cli_login
+   certora-cloud login
 
 Local Mode Limitations
 ----------------------

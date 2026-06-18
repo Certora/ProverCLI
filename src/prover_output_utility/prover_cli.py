@@ -146,7 +146,7 @@ Examples:
   %(prog)s --local-path "./emv-1-certora-19-Aug--13-09" --statsdata
 
 Environment Variables:
-  CERTORAKEY    Your Certora API key (required if cert_cli_login not available)
+  CERTORAKEY    Your Certora API key (required if certora_login not available)
         """,
     )
 
@@ -303,11 +303,11 @@ Environment Variables:
 
     # Check for authentication
     if not os.getenv("CERTORAKEY"):
-        # Try to use cert_cli_login if available
+        # Try to use certora_login if available
         try:
             from certora_login import login  # noqa: F401
 
-            # cert_cli_login will handle authentication
+            # certora_login will handle authentication
         except ImportError:
             print("Error: CERTORAKEY environment variable not set", file=sys.stderr)
             print(

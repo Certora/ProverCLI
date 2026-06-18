@@ -93,11 +93,11 @@ class ProverOutputAPI:
     """
     Main API class for fetching and parsing Certora Prover outputs.
 
-    Authentication is handled automatically via cert_cli_login when accessing remote APIs.
+    Authentication is handled automatically via certora_login when accessing remote APIs.
     No CERTORAKEY required.
 
     Usage:
-        # Remote API (default) - uses cert_cli_login for authentication
+        # Remote API (default) - uses certora_login for authentication
         api = ProverOutputAPI()
         violations = api.get_violated_rules("https://prover.certora.com/output/12345/...")
         violations = api.get_violated_rules("12345")
@@ -119,7 +119,7 @@ class ProverOutputAPI:
         Initialize the ProverOutputAPI.
 
         Args:
-            certora_key: Deprecated - authentication is handled automatically via cert_cli_login
+            certora_key: Deprecated - authentication is handled automatically via certora_login
             enable_cache: Whether to enable persistent caching of API responses (default: True)
             use_local: Whether to use local emv-* folders instead of remote API (default: False)
             api_base_url: API base URL. When None (the default), resolve from the

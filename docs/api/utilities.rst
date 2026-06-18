@@ -197,7 +197,7 @@ ProverAuth
    :undoc-members:
    :show-inheritance:
 
-   Handles authentication via cert_cli_login.
+   Handles authentication via certora_login.
 
    **Methods:**
 

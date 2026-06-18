@@ -13,7 +13,7 @@ Initialize the API
 
    from prover_output_utility import ProverOutputAPI
 
-   # Initialize the API (uses cert_cli_login for authentication)
+   # Initialize the API (authenticates automatically via certora_login)
    api = ProverOutputAPI()
 
 Get Violated Rules
@@ -151,7 +151,7 @@ Error Handling
    except JobNotFoundError:
        print("Job not found - check the job ID")
    except AuthenticationError:
-       print("Authentication failed - run cert_cli_login")
+       print("Authentication failed - run: certora-cloud login")
    except ProverAPIError as e:
        print(f"API error: {e}")
 

@@ -1,7 +1,10 @@
 Authentication
 ==============
 
-ProverCLI uses ``cert_cli_login`` for authentication with the Certora Prover API.
+ProverCLI authenticates with the Certora Prover API using ``certora_login`` (provided by the
+``certora-cloud`` dependency). Login happens **automatically** the first time you construct
+``ProverOutputAPI()`` — it opens a browser PKCE flow when no valid session is stored, then caches
+the credentials. You can also pre-authenticate from the shell with ``certora-cloud login``.
 
 Setup
 -----
@@ -12,13 +15,13 @@ Setup
 
       pip install prover-cli
 
-2. **Login using cert_cli_login**:
+2. **(Optional) Pre-authenticate** — otherwise this happens automatically on first API use:
 
    .. code-block:: bash
 
-      cert_cli_login
+      certora-cloud login
 
-   This will authenticate you with the Certora service and store your credentials securely.
+   This authenticates you with the Certora service and stores your credentials securely.
 
 3. **Verify authentication**:
 
@@ -36,13 +39,14 @@ Authentication in Code
 Default Authentication
 ^^^^^^^^^^^^^^^^^^^^^^
 
-By default, ProverCLI uses the credentials from ``cert_cli_login``:
+By default, ``ProverOutputAPI()`` authenticates automatically via ``certora_login`` (logging in on
+first use if needed):
 
 .. code-block:: python
 
    from prover_output_utility import ProverOutputAPI
 
-   # Automatically uses cert_cli_login credentials
+   # Triggers certora_login automatically on first use
    api = ProverOutputAPI()
 
 Deprecated: CERTORAKEY
@@ -55,7 +59,7 @@ The ``certora_key`` parameter is deprecated and should not be used:
    # DEPRECATED - Do not use
    api = ProverOutputAPI(certora_key="your-key")
 
-   # PREFERRED - Use cert_cli_login instead
+   # PREFERRED - automatic certora_login
    api = ProverOutputAPI()
 
 Handling Authentication Errors
@@ -74,21 +78,17 @@ If authentication fails, you'll receive an ``AuthenticationError``:
        violations = api.get_violated_rules("12345678")
    except AuthenticationError as e:
        print("Authentication failed!")
-       print("Please run: cert_cli_login")
+       print("Please run: certora-cloud login")
        print(f"Error details: {e}")
 
 Re-authenticating
 -----------------
 
-If your credentials expire or you need to switch accounts:
+If your credentials expire or you need to switch accounts, log in again:
 
 .. code-block:: bash
 
-   # Logout
-   cert_cli_logout
-
-   # Login again
-   cert_cli_login
+   certora-cloud login
 
 CI/CD Environments
 ------------------
@@ -144,7 +144,7 @@ Security Best Practices
 -----------------------
 
 1. **Never commit credentials**: Don't hardcode API keys or credentials in your code
-2. **Use cert_cli_login**: Prefer the official authentication method
+2. **Use certora_login**: Prefer the official authentication method (``certora-cloud login`` / automatic login)
 3. **Rotate credentials**: Periodically rotate your Certora credentials
 4. **Use environment-specific credentials**: Use different credentials for development, staging, and production
 5. **Limit scope**: Use credentials with minimal required permissions
@@ -155,13 +155,12 @@ Troubleshooting
 Authentication fails with "Invalid credentials"
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. Ensure you've run ``cert_cli_login``
-2. Try logging out and back in:
+1. Ensure you've logged in (``certora-cloud login``)
+2. Try logging in again to refresh your session:
 
    .. code-block:: bash
 
-      cert_cli_logout
-      cert_cli_login
+      certora-cloud login
 
 3. Check that you have valid Certora account access
 

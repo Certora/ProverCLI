@@ -36,7 +36,7 @@ Core API
 - ``ProverOutputAPI`` class with comprehensive methods for accessing prover outputs
 - Support for job URLs and job IDs as input
 - Support for local ``emv-*`` folders
-- Authentication via ``cert_cli_login``
+- Authentication via ``certora_login``
 - Persistent caching system for improved performance
 
 Data Fetching Methods

@@ -42,13 +42,13 @@ AuthenticationError
 
    **Common causes:**
 
-   - Not logged in via ``cert_cli_login``
+   - Not logged in via ``certora_login``
    - Invalid or expired credentials
    - Missing authentication tokens
 
    **Resolution:**
 
-   Run ``cert_cli_login`` to authenticate.
+   Run ``certora-cloud login`` to authenticate.
 
 JobNotFoundError
 ^^^^^^^^^^^^^^^^
@@ -153,7 +153,7 @@ Specific Exception Handling
        violations = api.get_violated_rules("12345678")
 
    except AuthenticationError:
-       print("Authentication failed - please run cert_cli_login")
+       print("Authentication failed - please run: certora-cloud login")
 
    except JobNotFoundError:
        print("Job not found - check the job ID and your permissions")

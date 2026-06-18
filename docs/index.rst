@@ -23,7 +23,7 @@ Features
 --------
 
 - **Flexible Input**: Accepts both job URLs (format: ``/output/user_id/job_id``) and job IDs
-- **Simple Authentication**: Uses ``cert_cli_login`` for authentication
+- **Simple Authentication**: Automatic ``certora_login`` (browser PKCE) on first use
 - **Comprehensive Parsing**: Extracts job info, verification results, rule details, and statistics
 - **Error Handling**: Robust error handling with custom exceptions
 - **Type Safety**: Full type hints for better development experience

@@ -85,13 +85,13 @@ except ImportError:
 
 class ProverAuth:
     """
-    Handles authentication with Certora Prover API using cert_cli_login.
+    Handles authentication with Certora Prover API using certora_login.
     """
 
     def __init__(self):
         """
         Initialize authentication.
-        Uses cert_cli_login for authentication, no CERTORAKEY needed.
+        Uses certora_login for authentication, no CERTORAKEY needed.
         """
         self._retry_count = 0
         self._max_retries = 1
@@ -125,7 +125,7 @@ class ProverAuth:
             RequestsCookieJar with authentication cookies
 
         Raises:
-            AuthenticationError: If cert_cli_login is not available or fails
+            AuthenticationError: If certora_login is not available or fails
         """
         cookies = requests.cookies.RequestsCookieJar()
 
@@ -133,7 +133,7 @@ class ProverAuth:
         if os.getenv("CI"):
             return cookies
 
-        # Use cert_cli_login for authentication
+        # Use certora_login for authentication
         if login is None:
             raise AuthenticationError(
                 "certora_login package is not installed. "
@@ -163,7 +163,7 @@ class ProverAuth:
         """
         Get authentication headers for API requests.
 
-        Note: Headers are typically not needed when using cookies from cert_cli_login.
+        Note: Headers are typically not needed when using cookies from certora_login.
         This method returns an empty dict as headers are handled via cookies.
 
         Returns:
