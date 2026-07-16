@@ -201,10 +201,26 @@ class AWSDataFetcher(BaseDataFetcher):
 
     def fetch_statsdata(self, job_identifier: str) -> Dict[str, Any]:
         """Fetch statsdata.json for a job via Lambda."""
-        return cast(Dict[str, Any], json.loads(self.fetch_output_file(job_identifier, "statsdata.json")))
+        try:
+            return cast(Dict[str, Any], json.loads(self.fetch_output_file(job_identifier, "statsdata.json")))
+        except json.JSONDecodeError as e:
+            raise ProverAPIError(f"Failed to parse statsdata.json for {job_identifier}: {e}")
 
     def fetch_output_file(self, job_identifier: str, rel_path: str) -> str:
-        """Fetch the raw text of a Reports/-relative output file (e.g. unsat_core_map.json)."""
+        """Fetch the raw text of a Reports/-relative output file (e.g. unsat_core_map.json).
+
+        Args:
+            job_identifier: Job ID
+            rel_path: Path of the file relative to the job's Reports/ directory
+
+        Returns:
+            The file contents as text
+
+        Raises:
+            AuthenticationError: If authentication fails
+            JobNotFoundError: If the job or file is not found
+            ProverAPIError: If the API call fails
+        """
         endpoint = f"{self.base_url}/v1/domain/jobs/{job_identifier}/f/{rel_path}"
 
         try:

@@ -172,6 +172,7 @@ class BaseDataFetcher(ABC):
             Raw file content as a string
 
         Raises:
+            AuthenticationError: If authentication fails (remote fetchers)
             JobNotFoundError: If the file is not found
             ProverAPIError: If fetch fails
         """

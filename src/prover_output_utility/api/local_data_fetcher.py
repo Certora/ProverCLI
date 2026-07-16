@@ -201,7 +201,10 @@ class LocalDataFetcher(BaseDataFetcher):
 
     def fetch_statsdata(self, job_identifier: str) -> Dict[str, Any]:
         """Fetch statsdata.json from local emv-* folder."""
-        return json.loads(self.fetch_output_file(job_identifier, "statsdata.json"))
+        try:
+            return json.loads(self.fetch_output_file(job_identifier, "statsdata.json"))
+        except json.JSONDecodeError as e:
+            raise ProverAPIError(f"Failed to parse statsdata.json: {e}")
 
     def fetch_outputs(self, job_identifier: str) -> bytes:
         """
@@ -237,15 +240,30 @@ class LocalDataFetcher(BaseDataFetcher):
         raise ProverAPIError("fetch_source_file_content is not supported for local prover outputs")
 
     def fetch_output_file(self, job_identifier: str, rel_path: str) -> str:
-        """Read a Reports/-relative output file from a local emv-* folder."""
+        """Read a Reports/-relative output file from a local emv-* folder.
+
+        Args:
+            job_identifier: Path to the emv-* folder
+            rel_path: Path of the file relative to the folder's Reports/ directory
+
+        Returns:
+            The file contents as text
+
+        Raises:
+            JobNotFoundError: If the folder or file is not found
+            ProverAPIError: If the file cannot be read
+        """
         emv_path = os.path.abspath(job_identifier)
         if not os.path.exists(emv_path):
             raise JobNotFoundError(f"Local prover output path not found: {job_identifier}")
         file_path = os.path.join(emv_path, "Reports", rel_path)
         if not os.path.exists(file_path):
             raise JobNotFoundError(f"Output file not found: {rel_path}")
-        with open(file_path, "r") as f:
-            return f.read()
+        try:
+            with open(file_path, "r") as f:
+                return f.read()
+        except OSError as e:
+            raise ProverAPIError(f"Failed to read output file {rel_path}: {e}")
 
     def fetch_alert_report(self, job_identifier: str) -> List[Dict[str, Any]]:
         """
