@@ -22,7 +22,7 @@ import requests
 from ..auth import ProverAuth
 from ..aws_auth import AWSAuth
 from ..breadcrumb import BreadcrumbParser
-from ..exceptions import ProverAPIError
+from ..exceptions import JobNotFoundError, ProverAPIError
 from ..job_report import JobAnalyzer, JobReport
 from ..models import (
     BreadcrumbInfo,
@@ -1135,12 +1135,27 @@ class ProverOutputAPI:
         return tar_content
 
     def extract_unsat_core_files(self, job_input: str, dest_dir: Path) -> List[Path]:
-        """Extract UnsatCoreTAC*.txt files from the job output tar into dest_dir.
+        """Extract UnsatCoreTAC*.txt files into dest_dir.
 
-        No filtering is applied — the caller is responsible for any filtering.
+        Uses unsat_core_map.json to fetch only the referenced files; falls back to the
+        full output tar when the map is absent. No filtering is applied — the caller is
+        responsible for any filtering.
 
         Returns list of extracted file paths.
         """
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        core_map = self.unsat_core_map(job_input)
+        if core_map:
+            filenames = sorted({f for files in core_map.values() for f in files})
+            extracted: List[Path] = []
+            for name in filenames:
+                file_dest = dest_dir / Path(name).name
+                file_dest.write_text(self.fetch_output_file(job_input, name), encoding="utf-8")
+                extracted.append(file_dest)
+            return extracted
+        return self._extract_unsat_core_files_from_tar(job_input, dest_dir)
+
+    def _extract_unsat_core_files_from_tar(self, job_input: str, dest_dir: Path) -> List[Path]:
         job_identifier = self._extract_job_identifier(job_input)
         dest_dir.mkdir(parents=True, exist_ok=True)
         tar_content = self._fetch_outputs_cached(job_identifier)
@@ -1158,6 +1173,27 @@ class ProverOutputAPI:
                         file_dest.write_bytes(file_obj.read())
                         extracted.append(file_dest)
         return extracted
+
+    def fetch_output_file(self, job_input: str, rel_path: str) -> str:
+        """Fetch the raw text of a Reports/-relative output file (e.g. 'unsat_core_map.json')."""
+        job_identifier = self._extract_job_identifier(job_input)
+        return self.data_fetcher.fetch_output_file(job_identifier, rel_path)
+
+    def unsat_core_map(self, job_input: str) -> Dict[str, List[str]]:
+        """The job's `{ ruleId -> [UnsatCoreTAC .txt filenames] }` map, or {} if the job has none."""
+        try:
+            content = self.fetch_output_file(job_input, "unsat_core_map.json")
+        except JobNotFoundError:
+            return {}
+        return json.loads(content)
+
+    def unsat_core_filenames(self, job_input: str, rule_id: str) -> List[str]:
+        """UnsatCoreTAC .txt filenames for a rule (by its treeView ruleId); [] if none."""
+        return self.unsat_core_map(job_input).get(rule_id, [])
+
+    def read_unsat_cores(self, job_input: str, rule_id: str) -> List[str]:
+        """Contents of a rule's UnsatCoreTAC .txt dumps (by its treeView ruleId)."""
+        return [self.fetch_output_file(job_input, name) for name in self.unsat_core_filenames(job_input, rule_id)]
 
     def extract_certora_sources(self, job_input: str, dest_dir: Path) -> None:
         """Extract the .certora_sources tree from the job output tar into dest_dir.

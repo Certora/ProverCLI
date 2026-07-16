@@ -200,38 +200,8 @@ class LocalDataFetcher(BaseDataFetcher):
         raise ProverAPIError("cancel_jobs is not supported for local prover outputs")
 
     def fetch_statsdata(self, job_identifier: str) -> Dict[str, Any]:
-        """
-        Fetch statsdata.json from local emv-* folder.
-
-        Args:
-            job_identifier: Path to the emv-* folder
-
-        Returns:
-            Stats data from statsdata.json
-
-        Raises:
-            JobNotFoundError: If statsdata.json is not found
-            ProverAPIError: If local files cannot be read
-        """
-        emv_path = os.path.abspath(job_identifier)
-
-        if not os.path.exists(emv_path):
-            raise JobNotFoundError(f"Local prover output path not found: {job_identifier}")
-
-        try:
-            # Look for statsdata.json in Reports directory
-            statsdata_path = os.path.join(emv_path, "Reports", "statsdata.json")
-
-            if not os.path.exists(statsdata_path):
-                raise JobNotFoundError(f"Stats data not found for local job {job_identifier}")
-
-            with open(statsdata_path, "r") as f:
-                return json.load(f)
-
-        except json.JSONDecodeError as e:
-            raise ProverAPIError(f"Failed to parse statsdata.json: {e}")
-        except Exception as e:
-            raise ProverAPIError(f"Failed to read stats data from {job_identifier}: {e}")
+        """Fetch statsdata.json from local emv-* folder."""
+        return json.loads(self.fetch_output_file(job_identifier, "statsdata.json"))
 
     def fetch_outputs(self, job_identifier: str) -> bytes:
         """
@@ -265,6 +235,17 @@ class LocalDataFetcher(BaseDataFetcher):
             ProverAPIError: Always (not supported for local)
         """
         raise ProverAPIError("fetch_source_file_content is not supported for local prover outputs")
+
+    def fetch_output_file(self, job_identifier: str, rel_path: str) -> str:
+        """Read a Reports/-relative output file from a local emv-* folder."""
+        emv_path = os.path.abspath(job_identifier)
+        if not os.path.exists(emv_path):
+            raise JobNotFoundError(f"Local prover output path not found: {job_identifier}")
+        file_path = os.path.join(emv_path, "Reports", rel_path)
+        if not os.path.exists(file_path):
+            raise JobNotFoundError(f"Output file not found: {rel_path}")
+        with open(file_path, "r") as f:
+            return f.read()
 
     def fetch_alert_report(self, job_identifier: str) -> List[Dict[str, Any]]:
         """

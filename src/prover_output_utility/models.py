@@ -31,6 +31,7 @@ class NodeStatus(str, Enum):
 
     VIOLATED = "VIOLATED"
     VERIFIED = "VERIFIED"
+    SANITY_FAILED = "SANITY_FAILED"
     TIMEOUT = "TIMEOUT"
     ERROR = "ERROR"
     RUNNING = "RUNNING"
@@ -221,6 +222,7 @@ class CheckResult:
     node_type: NodeType
     contract_name: Optional[str] = None
     method_only: Optional[str] = None
+    rule_id: Optional[str] = None
     ui_id: Optional[str] = None
     output_files: List[str] = field(default_factory=list)
     debug_trace_file: Optional[str] = None
@@ -255,6 +257,7 @@ class CheckResult:
         return {
             "rule_name": self.rule_name,
             "method_name": self.method_name,
+            "rule_id": self.rule_id,
             "contract_name": self.contract_name,
             "method_only": self.method_only,
             "assert_message": self.assert_message,

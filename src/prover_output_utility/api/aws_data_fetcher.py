@@ -7,6 +7,7 @@ AWS Lambda-based data fetcher for CI environments.
 Uses AWS SigV4 authentication to access Certora API through Lambda.
 """
 
+import json
 import os
 from typing import Any, Dict, List, Optional, cast
 
@@ -199,37 +200,28 @@ class AWSDataFetcher(BaseDataFetcher):
             raise ProverAPIError(f"Failed to fetch tree-view data for {job_identifier}: {e}")
 
     def fetch_statsdata(self, job_identifier: str) -> Dict[str, Any]:
-        """
-        Fetch statsdata.json for a job via Lambda.
+        """Fetch statsdata.json for a job via Lambda."""
+        return cast(Dict[str, Any], json.loads(self.fetch_output_file(job_identifier, "statsdata.json")))
 
-        Args:
-            job_identifier: Job ID to fetch
-
-        Returns:
-            Stats data from statsdata.json
-
-        Raises:
-            AuthenticationError: If authentication fails
-            JobNotFoundError: If job is not found
-            ProverAPIError: If API call fails
-        """
-        endpoint = f"{self.base_url}/v1/domain/jobs/{job_identifier}/f/statsdata.json"
+    def fetch_output_file(self, job_identifier: str, rel_path: str) -> str:
+        """Fetch the raw text of a Reports/-relative output file (e.g. unsat_core_map.json)."""
+        endpoint = f"{self.base_url}/v1/domain/jobs/{job_identifier}/f/{rel_path}"
 
         try:
             response = self._make_signed_request("GET", endpoint)
 
             if response.status_code == 200:
-                return cast(Dict[str, Any], response.json())
+                return response.text
             elif response.status_code == 401:
                 raise AuthenticationError("Authentication failed - check AWS credentials")
             elif response.status_code == 404:
-                raise JobNotFoundError(f"Stats data not found for job {job_identifier}")
+                raise JobNotFoundError(f"Output file not found for job {job_identifier}: {rel_path}")
             else:
                 response.raise_for_status()
-                return cast(Dict[str, Any], response.json())
+                return response.text
 
         except requests.exceptions.RequestException as e:
-            raise ProverAPIError(f"Failed to fetch stats data for {job_identifier}: {e}")
+            raise ProverAPIError(f"Failed to fetch output file {rel_path} for {job_identifier}: {e}")
 
     def fetch_outputs(self, job_identifier: str) -> bytes:
         """

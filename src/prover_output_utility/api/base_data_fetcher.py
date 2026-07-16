@@ -160,6 +160,24 @@ class BaseDataFetcher(ABC):
         pass
 
     @abstractmethod
+    def fetch_output_file(self, job_identifier: str, rel_path: str) -> str:
+        """
+        Fetch the raw text of a file under the job's Reports/ output dir.
+
+        Args:
+            job_identifier: Job identifier (job ID for remote, emv path for local)
+            rel_path: Reports/-relative filename (e.g. "unsat_core_map.json", "UnsatCoreTAC-....txt")
+
+        Returns:
+            Raw file content as a string
+
+        Raises:
+            JobNotFoundError: If the file is not found
+            ProverAPIError: If fetch fails
+        """
+        pass
+
+    @abstractmethod
     def fetch_alert_report(self, job_identifier: str) -> List[Dict[str, Any]]:
         """
         Fetch alert report (alertReport.json) for a job.
