@@ -1185,7 +1185,10 @@ class ProverOutputAPI:
             content = self.fetch_output_file(job_input, "unsat_core_map.json")
         except JobNotFoundError:
             return {}
-        return json.loads(content)
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            raise ProverAPIError(f"Failed to parse unsat_core_map.json for {job_input}: {e}")
 
     def unsat_core_filenames(self, job_input: str, rule_id: str) -> List[str]:
         """UnsatCoreTAC .txt filenames for a rule (by its treeView ruleId); [] if none."""
