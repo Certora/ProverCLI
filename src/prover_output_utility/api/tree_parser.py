@@ -285,6 +285,7 @@ class TreeParser:
         return CheckResult(
             rule_name=self._get_rule_name_from_context(context),
             method_name=method_name,  # Use the explicitly tracked method name
+            rule_id=node.get("ruleId"),
             contract_name=contract_name,
             method_only=method_only,
             assert_message=assert_message,
