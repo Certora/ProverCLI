@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
 from .api import ProverOutputAPI
 from .breadcrumb import format_breadcrumbs_text
@@ -124,6 +125,7 @@ Examples:
   %(prog)s --job-id 12345 --statsdata
   %(prog)s --job-id 12345 --full-report
   %(prog)s --job-id 12345 --full-report --format json
+  %(prog)s --job-id 12345 --download-sources ./job_sources
   %(prog)s --cancel 12345 67890
 
   # Group summary
@@ -213,6 +215,17 @@ Environment Variables:
             "Get the full structured job report (violated/timeout/error/verified rules, "
             "alerts, call resolutions, duration) as a single JSON object. Equivalent to "
             "ProverOutputAPI.get_job_report() and intended as the one-shot triage call."
+        ),
+    )
+    parser.add_argument(
+        "--download-sources",
+        nargs="?",
+        const=".",
+        metavar="DEST_DIR",
+        help=(
+            "Download the job's source files into DEST_DIR/inputs/.certora_sources/ "
+            "(DEST_DIR defaults to the current directory). Files are fetched "
+            "individually in parallel; a completed fetch is skipped on rerun."
         ),
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
@@ -477,6 +490,22 @@ Environment Variables:
             report = api.get_job_report(job_input)
             result = {"job_id": job_input, "report": report.to_dict()}
 
+        elif args.download_sources:
+            # Download the job's source files (remote jobs only)
+            dest_dir = Path(args.download_sources)
+            api.fetch_job_sources(job_input, dest_dir)
+            sources_dir = dest_dir / "inputs" / ".certora_sources"
+            files_count = sum(
+                1
+                for p in sources_dir.rglob("*")
+                if p.is_file() and p.name != ".source_fetch_complete"
+            )
+            result = {
+                "job_id": job_input,
+                "sources_dir": str(sources_dir),
+                "files_count": files_count,
+            }
+
         else:
             # Get violated rules (default behavior)
             violations = api.get_violated_rules(job_input)
@@ -516,6 +545,11 @@ Environment Variables:
                 print(f"Found {count} alerts. Results written to {args.output}")
             elif args.full_report:
                 print(f"✅ Full report retrieved. Results written to {args.output}")
+            elif args.download_sources:
+                print(
+                    f"Downloaded {result['files_count']} source files to {result['sources_dir']}. "
+                    f"Results written to {args.output}"
+                )
             else:
                 count = result.get("assert_nodes_count", 0)
                 print(f"Found {count} violations. Results written to {args.output}")
@@ -615,6 +649,10 @@ Environment Variables:
                         print(format_alert(alert, i))
                 else:
                     print("\n✅ No alerts found!")
+
+            elif args.download_sources:
+                print(f"Job ID: {job_input}")
+                print(f"✅ Downloaded {result['files_count']} source files to {result['sources_dir']}")
 
             elif args.full_report:
                 # Summary view of the full report. Full content via --format json.

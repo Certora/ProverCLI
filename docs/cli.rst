@@ -111,6 +111,19 @@ action flag) returns the violated rules.
 
    Typed alerts from the alert report.
 
+.. option:: --download-sources [DEST_DIR]
+
+   Download the job's source files into
+   ``DEST_DIR/inputs/.certora_sources/`` (``DEST_DIR`` defaults to the
+   current directory), preserving the original tree structure. Files are
+   fetched individually in parallel — no full-tarball download. A
+   completed fetch leaves a ``.source_fetch_complete`` marker, so reruns
+   are skipped. Remote jobs only.
+
+   .. code-block:: bash
+
+      prover-cli --job-id JOB --download-sources ./job_sources
+
 Standalone Commands
 -------------------
 
@@ -301,3 +314,4 @@ When using ``--local-path``, the following commands are not available
 - ``--recent-jobs``
 - ``--cancel``
 - ``--who-am-i``
+- ``--download-sources``

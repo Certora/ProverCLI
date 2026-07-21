@@ -12,6 +12,9 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 ^^^^^
 
+- ``prover-cli --download-sources [DEST_DIR]`` flag — download a job's source
+  files into ``DEST_DIR/inputs/.certora_sources/`` (parallel per-file fetch,
+  no tarball). Mirrors ``ProverOutputAPI.fetch_job_sources()``.
 - ``prover-cli --full-report`` flag — one-shot triage that returns the full
   ``JobReport`` (rules grouped by status, calls, alerts, duration, job status)
   as a single JSON blob. Mirrors ``ProverOutputAPI.get_job_report()``.
