@@ -1,5 +1,8 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+# hatchling >=1.27 emits wheel Metadata-Version 2.5 (PEP 639 license fields),
+# which the pinned pypa/gh-action-pypi-publish twine cannot validate. Cap below
+# 1.27 so wheels carry Metadata-Version 2.3, accepted by that action and PyPI.
+requires = ["hatchling<1.27", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
