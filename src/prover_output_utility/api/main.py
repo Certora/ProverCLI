@@ -47,8 +47,9 @@ from .url_utils import extract_job_id, extract_job_identifier
 
 #: Seconds a request may go without progress before it is abandoned. requests measures this per
 #: socket read rather than over the whole call, so a large download that keeps streaming is
-#: unaffected; it fires when the peer goes quiet. Same value the SigV4 fetcher passes.
-_REQUEST_TIMEOUT_S = 30
+#: unaffected; it fires when the peer goes quiet. The headroom over the SigV4 fetcher's 30 is for
+#: the outputs archive, where the server has a lot to assemble before the first byte arrives.
+_REQUEST_TIMEOUT_S = 60
 
 
 class _TimedSession(requests.Session):
