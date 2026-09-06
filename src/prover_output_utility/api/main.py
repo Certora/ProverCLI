@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from ..auth import ProverAuth
 from ..aws_auth import AWSAuth
@@ -51,15 +53,37 @@ from .url_utils import extract_job_id, extract_job_identifier
 #: the outputs archive, where the server has a lot to assemble before the first byte arrives.
 _REQUEST_TIMEOUT_S = 60
 
+#: A silent peer that resets or 5xx's mid-transfer is transient — the same request usually succeeds
+#: moments later. Retry it with exponential backoff (``backoff_factor`` doubles the wait each attempt:
+#: ~0.5s, 1s, 2s), capped at a few attempts so an unrecoverable endpoint still fails promptly rather
+#: than looping. Only the default idempotent methods are retried (urllib3 excludes POST), so a retry
+#: never re-runs a non-idempotent call.
+_MAX_RETRIES = 3
+_BACKOFF_FACTOR = 0.5
+
 
 class _TimedSession(requests.Session):
-    """A session whose requests give up on a silent peer.
+    """A session whose requests give up on a silent peer and retry a transient failure.
 
     requests applies no timeout of its own, so an unresponsive endpoint holds its caller for as
     long as the socket stays open, and a caller that handed the call to a thread cannot get that
-    thread back. Every ``get``/``post`` on a session goes through ``request``, so the default
-    belongs here rather than at each call site. A caller that passes its own timeout keeps it.
+    thread back. Every ``get``/``post`` on a session goes through ``request``, so the timeout default
+    belongs here rather than at each call site. A caller that passes its own timeout keeps it. The
+    mounted adapter additionally retries transient connection/read failures and 502/503/504 with
+    exponential backoff.
     """
+
+    def __init__(self) -> None:
+        super().__init__()
+        retry = Retry(
+            total=_MAX_RETRIES,
+            backoff_factor=_BACKOFF_FACTOR,
+            status_forcelist=(502, 503, 504),
+            raise_on_status=False,  # leave status-code handling to the callers
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.mount("https://", adapter)
+        self.mount("http://", adapter)
 
     def request(self, *args, **kwargs) -> requests.Response:
         kwargs.setdefault("timeout", _REQUEST_TIMEOUT_S)
