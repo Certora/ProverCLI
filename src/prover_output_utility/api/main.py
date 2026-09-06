@@ -45,6 +45,27 @@ from .tree_parser import TreeParser
 from .url_utils import extract_job_id, extract_job_identifier
 
 
+#: Seconds a request may go without progress before it is abandoned. requests measures this per
+#: socket read rather than over the whole call, so a large download that keeps streaming is
+#: unaffected; it fires when the peer goes quiet. The headroom over the SigV4 fetcher's 30 is for
+#: the outputs archive, where the server has a lot to assemble before the first byte arrives.
+_REQUEST_TIMEOUT_S = 60
+
+
+class _TimedSession(requests.Session):
+    """A session whose requests give up on a silent peer.
+
+    requests applies no timeout of its own, so an unresponsive endpoint holds its caller for as
+    long as the socket stays open, and a caller that handed the call to a thread cannot get that
+    thread back. Every ``get``/``post`` on a session goes through ``request``, so the default
+    belongs here rather than at each call site. A caller that passes its own timeout keeps it.
+    """
+
+    def request(self, *args, **kwargs) -> requests.Response:
+        kwargs.setdefault("timeout", _REQUEST_TIMEOUT_S)
+        return super().request(*args, **kwargs)
+
+
 # Per-job locks for thread-safe fetch operations
 _fetch_locks: dict[str, threading.Lock] = {}
 _fetch_locks_lock = threading.Lock()
@@ -158,7 +179,7 @@ class ProverOutputAPI:
 
     def _setup_session(self, force_relogin: bool = False):
         """Setup session with authentication cookies."""
-        self.session = requests.Session()
+        self.session = _TimedSession()
         # Set up authentication
         self.session.cookies = self.auth.get_auth_cookies(force_relogin=force_relogin)
         self.data_fetcher = DataFetcher(self.session, api_instance=self, api_base_url=self.api_base_url)
