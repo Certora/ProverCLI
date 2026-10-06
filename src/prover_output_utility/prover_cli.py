@@ -194,6 +194,11 @@ Environment Variables:
     parser.add_argument("--breadcrumbs", help="Get breadcrumb trace from DAP file")
     parser.add_argument("--statsdata", action="store_true", help="Get statsdata.json for the job")
     parser.add_argument(
+        "--prover-version",
+        action="store_true",
+        help="Get cvt_version.json for the job (the prover version / commit it ran on)",
+    )
+    parser.add_argument(
         "--all-checks",
         action="store_true",
         help="Get all checks including tree nodes (both successful and failed)",
@@ -458,6 +463,11 @@ Environment Variables:
             statsdata = api.get_statsdata(job_input)
             result = {"job_id": job_input, "statsdata": statsdata}
 
+        elif args.prover_version:
+            # Get cvt_version.json (prover version / commit the job ran on)
+            prover_version = api.get_prover_version(job_input)
+            result = {"job_id": job_input, "prover_version": prover_version}
+
         elif args.all_checks:
             # Get all checks (both successful and failed)
             all_checks = api.get_all_checks(job_input)
@@ -534,6 +544,8 @@ Environment Variables:
                 )
             elif args.statsdata:
                 print(f"✅ Statsdata retrieved. Results written to {args.output}")
+            elif args.prover_version:
+                print(f"✅ prover_version retrieved. Results written to {args.output}")
             elif args.all_checks:
                 count = result.get("checks_count", 0)
                 print(f"Found {count} checks (all tree nodes). Results written to {args.output}")
@@ -610,6 +622,12 @@ Environment Variables:
                     if len(result["statsdata"]) > 5:
                         print(f"  ... and {len(result['statsdata']) - 5} more keys")
                     print("Use --format json to see full data")
+
+            elif args.prover_version:
+                print(f"Job ID: {job_input}")
+                print("✅ Retrieved cvt_version.json")
+                for key, value in result["prover_version"].items():
+                    print(f"  {key}: {value}")
 
             elif args.all_checks:
                 # Show all checks (both successful and failed)

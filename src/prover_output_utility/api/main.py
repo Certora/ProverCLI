@@ -798,6 +798,26 @@ class ProverOutputAPI:
         except Exception as e:
             raise ProverAPIError(f"Failed to get statsdata for job {job_identifier}: {e}")
 
+    def get_prover_version(self, job_input: str) -> Dict[str, Any]:
+        """
+        Get a job's cvt_version.json — the prover version / commit it ran on.
+
+        Args:
+            job_input: Job URL, job ID, or local emv-* path
+
+        Returns:
+            Parsed cvt_version.json contents (e.g. a "version" field and commit hashes)
+
+        Raises:
+            ProverAPIError: If fetching fails
+        """
+        job_identifier = self._extract_job_identifier(job_input)
+
+        try:
+            return self.data_fetcher.fetch_prover_version(job_identifier)
+        except Exception as e:
+            raise ProverAPIError(f"Failed to get prover version for job {job_identifier}: {e}")
+
     def get_console_logs(self, job_input: str) -> str:
         """
         Get console logs for a job. This contains the full console output 

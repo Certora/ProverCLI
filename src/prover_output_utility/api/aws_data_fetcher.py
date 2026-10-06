@@ -206,6 +206,13 @@ class AWSDataFetcher(BaseDataFetcher):
         except json.JSONDecodeError as e:
             raise ProverAPIError(f"Failed to parse statsdata.json for {job_identifier}: {e}")
 
+    def fetch_prover_version(self, job_identifier: str) -> Dict[str, Any]:
+        """Fetch a job's cvt_version.json (the prover version / commit it ran on)."""
+        try:
+            return cast(Dict[str, Any], json.loads(self.fetch_output_file(job_identifier, "cvt_version.json")))
+        except json.JSONDecodeError as e:
+            raise ProverAPIError(f"Failed to parse cvt_version.json for {job_identifier}: {e}")
+
     def fetch_output_file(self, job_identifier: str, rel_path: str) -> str:
         """Fetch the raw text of a Reports/-relative output file (e.g. unsat_core_map.json).
 

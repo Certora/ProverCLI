@@ -206,6 +206,20 @@ class LocalDataFetcher(BaseDataFetcher):
         except json.JSONDecodeError as e:
             raise ProverAPIError(f"Failed to parse statsdata.json: {e}")
 
+    def fetch_prover_version(self, job_identifier: str) -> Dict[str, Any]:
+        """Read cvt_version.json from a local emv-* folder's inputs/ directory."""
+        emv_path = os.path.abspath(job_identifier)
+        if not os.path.exists(emv_path):
+            raise JobNotFoundError(f"Local prover output path not found: {job_identifier}")
+        cvt_version_path = os.path.join(emv_path, "inputs", "cvt_version.json")
+        if not os.path.exists(cvt_version_path):
+            raise JobNotFoundError(f"cvt_version.json not found: {cvt_version_path}")
+        try:
+            with open(cvt_version_path, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            raise ProverAPIError(f"Failed to parse cvt_version.json: {e}")
+
     def fetch_outputs(self, job_identifier: str) -> bytes:
         """
         Fetch outputs archive for local job - not applicable for local files.
