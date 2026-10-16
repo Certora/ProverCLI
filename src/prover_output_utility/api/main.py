@@ -21,7 +21,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from ..auth import ProverAuth
+from ..auth import ProverAuth, organization_api_key
 from ..aws_auth import AWSAuth
 from ..breadcrumb import BreadcrumbParser
 from ..exceptions import JobNotFoundError, ProverAPIError
@@ -188,6 +188,13 @@ class ProverOutputAPI:
         # Initialize appropriate data fetcher
         if use_local:
             self.data_fetcher = LocalDataFetcher()
+        elif organization_api_key() is not None:
+            # An organization API key is an explicit credential, so it wins
+            # over the Lambda path below: that path exists for automation that
+            # has AWS credentials and no Certora login, and it would otherwise
+            # hide a key the caller deliberately supplied.
+            self.auth = ProverAuth()
+            self._setup_session()
         elif os.getenv("CI") and self._is_aws_available():
             # In CI with AWS credentials, use AWS Lambda authentication
             self.logger.info("Using AWS Lambda authentication in CI")
@@ -206,6 +213,9 @@ class ProverOutputAPI:
         self.session = _TimedSession()
         # Set up authentication
         self.session.cookies = self.auth.get_auth_cookies(force_relogin=force_relogin)
+        # An organization API key travels on every request of the session;
+        # with cookie authentication this adds nothing.
+        self.session.headers.update(self.auth.get_auth_headers())
         self.data_fetcher = DataFetcher(self.session, api_instance=self, api_base_url=self.api_base_url)
 
     def _is_aws_available(self) -> bool:
