@@ -18,7 +18,7 @@ from ..exceptions import ProverAPIError
 def _job_id_from_uuid(value: str) -> Optional[str]:
     """The job id behind a UUID spelling of it, or None for anything else.
 
-    A job id is 32 hex characters, and the dashboard writes it with dashes.
+    A job id is 32 hex characters, and an app link writes it with dashes.
     ``uuid.UUID`` accepts either spelling and rejects everything else, so it
     both validates the value and normalizes it.
     """
@@ -47,7 +47,7 @@ def extract_job_id(job_input: str) -> str:
     # Otherwise assume it's a direct job ID
     # Strip query params if present (e.g., hash?anonymousKey=...)
     clean = job_input.split("?")[0]
-    # The dashboard writes the same id as a UUID; the API takes it without dashes.
+    # An app link writes the same id as a UUID; the API takes it without dashes.
     hex_id = _job_id_from_uuid(clean)
     if hex_id is not None:
         return hex_id
@@ -130,9 +130,8 @@ def extract_job_id_from_url(url: str) -> str:
         elif idx + 1 < len(path_parts):
             return path_parts[idx + 1]
 
-    # The dashboard links a job as /orgs/<slug>/jobs/<uuid>, with an optional
-    # /report after it. The slug names the dashboard the link came from and
-    # says nothing about the job, so it is dropped.
+    # An app link names a job as /orgs/<slug>/jobs/<uuid>, with an optional
+    # /report after it. The slug is irrelevant, so it is dropped.
     if "jobs" in path_parts:
         idx = path_parts.index("jobs")
         if idx + 1 < len(path_parts):
