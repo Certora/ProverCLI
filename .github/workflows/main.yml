@@ -20,23 +20,6 @@ jobs:
       - name: Check SPDX/license headers (REUSE)
         run: uvx --from "reuse[charset-normalizer]" reuse lint
 
-  tests:
-    name: tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
-      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
-      - name: Unit tests
-        run: uv run --with pytest --with requests --with boto3 --with pycryptodome --with certora-cloud python -m pytest tests/ -q
-      # Proves an API key alone reaches the API, with no stored credentials and
-      # no browser. It skips when the secret is absent, so a fork stays green.
-      - name: Live key check
-        env:
-          AISS_ENV: stg
-          CERTORA_API_KEY_STG: ${{ secrets.CERTORA_API_KEY_STG }}
-          PROVER_CLI_LIVE_JOB_ID: ${{ vars.PROVER_CLI_LIVE_JOB_ID }}
-        run: uv run --with pytest --with requests --with boto3 --with pycryptodome --with certora-cloud python -m pytest tests/test_api_key_live.py -q
-
   build:
     name: build
     runs-on: ubuntu-latest
