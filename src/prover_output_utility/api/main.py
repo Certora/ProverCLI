@@ -188,15 +188,11 @@ class ProverOutputAPI:
         # Initialize appropriate data fetcher
         if use_local:
             self.data_fetcher = LocalDataFetcher()
-        elif organization_api_key() is not None:
-            # An organization API key is an explicit credential, so it wins
-            # over the Lambda path below: that path exists for automation that
-            # has AWS credentials and no Certora login, and it would otherwise
-            # hide a key the caller deliberately supplied.
-            self.auth = ProverAuth()
-            self._setup_session()
-        elif os.getenv("CI") and self._is_aws_available():
-            # In CI with AWS credentials, use AWS Lambda authentication
+        elif organization_api_key() is None and os.getenv("CI") and self._is_aws_available():
+            # In CI with AWS credentials, use AWS Lambda authentication. The
+            # path exists for automation that has AWS credentials and no
+            # Certora login, so a key the caller supplied on purpose takes
+            # precedence over it.
             self.logger.info("Using AWS Lambda authentication in CI")
             aws_auth = AWSAuth()
             aws_session = aws_auth.get_session()
@@ -204,12 +200,13 @@ class ProverOutputAPI:
             # No session needed for AWS auth
             self.session = None
         else:
-            # Regular cookie-based authentication
+            # Key or cookie authentication; ProverAuth resolves which applies
             self.auth = ProverAuth()
             self._setup_session()
 
     def _setup_session(self, force_relogin: bool = False):
-        """Setup session with authentication cookies."""
+        """Setup session with whichever credential ProverAuth resolves: an
+        organization API key on the Authorization header, or login cookies."""
         self.session = _TimedSession()
         # Set up authentication
         self.session.cookies = self.auth.get_auth_cookies(force_relogin=force_relogin)
