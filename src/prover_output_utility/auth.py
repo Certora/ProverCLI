@@ -83,6 +83,30 @@ except ImportError:
     SERVERS = None
 
 
+# Environment variables holding an organization API key, in the order they are
+# consulted. The env-scoped name comes first so a machine configured for one
+# environment cannot be pointed at another by a stray generic value.
+_API_KEY_ENV_VARS: Dict[LoginEnv, tuple[str, ...]] = {
+    "prod": ("CERTORA_API_KEY_PROD", "CERTORA_API_KEY"),
+    "stg": ("CERTORA_API_KEY_STG", "CERTORA_API_KEY"),
+    "dev": ("CERTORA_API_KEY_DEV", "CERTORA_API_KEY"),
+}
+
+
+def organization_api_key() -> str | None:
+    """The organization API key for the current login env, if one is set.
+
+    This is the key issued on the organization's API page, not ``CERTORAKEY``.
+    The API accepts it on the ``Authorization`` header and exchanges it for a
+    short-lived token itself, so a caller that has one needs no browser login.
+    """
+    for name in _API_KEY_ENV_VARS[resolve_login_env()]:
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            return value
+    return None
+
+
 class ProverAuth:
     """
     Handles authentication with Certora Prover API using certora_login.
@@ -129,6 +153,11 @@ class ProverAuth:
         """
         cookies = requests.cookies.RequestsCookieJar()
 
+        # An organization API key authenticates on the header instead, so
+        # there is nothing to log in for and no cookie to carry.
+        if organization_api_key() is not None:
+            return cookies
+
         # Skip authentication in CI environment - return empty cookies
         if os.getenv("CI"):
             return cookies
@@ -163,10 +192,17 @@ class ProverAuth:
         """
         Get authentication headers for API requests.
 
-        Note: Headers are typically not needed when using cookies from certora_login.
-        This method returns an empty dict as headers are handled via cookies.
+        An organization API key authenticates on the ``Authorization``
+        header: the API classifies the credential by shape and exchanges an
+        opaque key for a short-lived token on the caller's behalf, so no
+        browser login and no cookie are involved. Without a key the cookies
+        from certora_login carry the identity and there is no header to add.
 
         Returns:
-            Empty dictionary (authentication is via cookies)
+            The bearer header for the organization API key, or an empty
+            dictionary when authentication is via cookies.
         """
-        return {}
+        key = organization_api_key()
+        if key is None:
+            return {}
+        return {"Authorization": f"Bearer {key}"}
