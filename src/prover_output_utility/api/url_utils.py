@@ -8,10 +8,24 @@ URL and job ID extraction utilities.
 
 import os
 import re
+import uuid
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 from ..exceptions import ProverAPIError
+
+
+def _job_id_from_uuid(value: str) -> Optional[str]:
+    """The job id behind a UUID spelling of it, or None for anything else.
+
+    A job id is 32 hex characters, and an app link writes it with dashes.
+    ``uuid.UUID`` accepts either spelling and rejects everything else, so it
+    both validates the value and normalizes it.
+    """
+    try:
+        return uuid.UUID(value).hex
+    except ValueError:
+        return None
 
 
 def extract_job_id(job_input: str) -> str:
@@ -33,6 +47,10 @@ def extract_job_id(job_input: str) -> str:
     # Otherwise assume it's a direct job ID
     # Strip query params if present (e.g., hash?anonymousKey=...)
     clean = job_input.split("?")[0]
+    # An app link writes the same id as a UUID; the API takes it without dashes.
+    hex_id = _job_id_from_uuid(clean)
+    if hex_id is not None:
+        return hex_id
     if re.match(r"^[a-zA-Z0-9_-]+$", clean):
         return clean
 
@@ -111,6 +129,15 @@ def extract_job_id_from_url(url: str) -> str:
         # (for backwards compatibility)
         elif idx + 1 < len(path_parts):
             return path_parts[idx + 1]
+
+    # An app link names a job as /orgs/<slug>/jobs/<uuid>, with an optional
+    # /report after it. The slug is irrelevant, so it is dropped.
+    if "jobs" in path_parts:
+        idx = path_parts.index("jobs")
+        if idx + 1 < len(path_parts):
+            hex_id = _job_id_from_uuid(path_parts[idx + 1])
+            if hex_id is not None:
+                return hex_id
 
     if "job" in path_parts:
         idx = path_parts.index("job")
