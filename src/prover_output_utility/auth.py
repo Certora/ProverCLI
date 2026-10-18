@@ -83,28 +83,20 @@ except ImportError:
     SERVERS = None
 
 
-# Environment variables holding an organization API key, in the order they are
-# consulted. The env-scoped name comes first so a machine configured for one
-# environment cannot be pointed at another by a stray generic value.
-_API_KEY_ENV_VARS: Dict[LoginEnv, tuple[str, ...]] = {
-    "prod": ("CERTORA_API_KEY_PROD", "CERTORA_API_KEY"),
-    "stg": ("CERTORA_API_KEY_STG", "CERTORA_API_KEY"),
-    "dev": ("CERTORA_API_KEY_DEV", "CERTORA_API_KEY"),
-}
+#: The environment variable holding the Certora key, the one certora-cli reads,
+#: so one value serves submitting a job and reading its results.
+KEY_ENV_VAR = "CERTORAKEY"
 
 
 def organization_api_key() -> str | None:
-    """The organization API key for the current login env, if one is set.
+    """The organization API key, if one is set.
 
-    This is the key issued on the organization's API page, not ``CERTORAKEY``.
-    The API accepts it on the ``Authorization`` header and exchanges it for a
-    short-lived token itself, so a caller that has one needs no browser login.
+    This is the key issued on the organization's API page, the same one
+    certora-cli submits jobs with. The API accepts it on the ``Authorization``
+    header and exchanges it for a short-lived token itself, so a caller that
+    has one needs no browser login.
     """
-    for name in _API_KEY_ENV_VARS[resolve_login_env()]:
-        value = (os.environ.get(name) or "").strip()
-        if value:
-            return value
-    return None
+    return (os.environ.get(KEY_ENV_VAR) or "").strip() or None
 
 
 class ProverAuth:
