@@ -12,6 +12,18 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 ^^^^^
 
+- ``prover-cli --verdicts`` — a job's verdicts rule by rule from its leaf
+  checks, with every violation's counterexample rendered as compact XML
+  (``prover_output_utility.counterexample``); ``--save-report FILE`` also
+  writes them and the full report as JSON.
+- ``prover-cli --wait TARGET ...`` — a bounded wait over job ids, job links
+  or ``certoraRun`` logs, ending when every job has stopped.
+- ``prover-cli --budget LOGS_DIR`` — prover jobs and minutes used by the
+  jobs in a directory of ``certoraRun`` logs, per log group, against a
+  budget; with ``--more-jobs K``, exit ``3`` unless ``K`` more jobs fit.
+- ``url_utils.find_job_ids`` — the job ids linked in a text such as a
+  ``certoraRun`` log.
+- ``JobStatus.is_final`` — whether a job has stopped.
 - ``prover-cli --download-sources [DEST_DIR]`` flag — download a job's source
   files into ``DEST_DIR/inputs/.certora_sources/`` (parallel per-file fetch,
   no tarball). Mirrors ``ProverOutputAPI.fetch_job_sources()``.

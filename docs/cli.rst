@@ -92,6 +92,32 @@ action flag) returns the violated rules.
 
    Leaf checks only — actual assertions.
 
+.. option:: --verdicts
+
+   The job's verdicts rule by rule, read from its leaf checks: one per
+   method of a parametric rule or invariant, and one per assertion. A
+   rule's top-level node only summarizes them; it can read ``ERROR`` while
+   a method is ``VIOLATED``, and it carries no counterexample. Text output
+   prints one line per rule with its leaf statuses counted, a line for each
+   leaf that is not ``VERIFIED``, and then every violated leaf's
+   counterexample rendered as ``<counterexample>`` XML (failing assert,
+   ``file:line``, and the call trace with values filled in). The JSON form
+   (``--format json`` or ``--output``) also holds the full ``--full-report``
+   content. Works with ``--local-path`` too.
+
+.. option:: --save-report FILE
+
+   With ``--verdicts``: print the verdicts as text and also write the JSON
+   form to ``FILE``.
+
+   .. code-block:: bash
+
+      prover-cli --job-id JOB --verdicts --save-report certora/logs/part1.report.json
+
+.. option:: --chain {evm,solana,soroban}
+
+   Which call-trace frames a counterexample keeps (default ``evm``).
+
 .. option:: --calltrace FILE
 
    Calltrace for the specific output file path (e.g.
@@ -163,6 +189,51 @@ These do not take a job-input flag:
 
       prover-cli --sighash "transfer(address,uint256)"
       prover-cli --sighash "0xa9059cbb"
+
+.. option:: --wait TARGET [TARGET ...]
+
+   Wait until every target has stopped, for at most ``--timeout`` seconds
+   (default 90), checking every ``--interval`` seconds (default 30). A
+   target is a job id, a job link, or the log of a ``certoraRun`` call
+   (``*.log``, read for the last job link it printed; the file need not
+   exist yet), or a glob of logs. Quote a glob, so it reaches the command
+   even when nothing matches yet (zsh refuses an unmatched glob); a glob
+   that matches nothing counts as one log with no job link. Prints
+   ``<target> <job id> <status>`` per job, then
+   ``ENDED`` or ``RUNNING``. A job has stopped when its status is
+   ``SUCCEEDED``, ``FAILED``, ``CANCELED``, ``HALTED``,
+   ``SERVICE_UNAVAILABLE`` or ``UPLOAD_FAILED``. ``CHECK_FAILED`` means the
+   status request failed and does not end the wait.
+
+   With ``--pid-file FILE`` naming the process that submits the logged
+   jobs, a log with no job link is ``SUBMITTING`` while that process runs
+   and ``NOT_SUBMITTED`` once it has exited, and the wait does not end
+   while it runs. Keep ``--timeout`` under the timeout of whatever runs
+   the command, and call it again on ``RUNNING``.
+
+   .. code-block:: bash
+
+      prover-cli --wait 'certora/logs/spec-p*_run3.log' \
+          --pid-file certora/logs/spec_run3.pid --timeout 90
+
+.. option:: --budget LOGS_DIR
+
+   Prover jobs and minutes used by the job links in ``LOGS_DIR/*.log``,
+   against ``--max-jobs``/``--max-minutes`` or ``LOGS_DIR/budget.json``
+   (``{"jobs": N, "minutes": M}``), with the use per log group. A log's
+   group is its name without a trailing ``_run<N>`` (or ``_r<M>run<N>``)
+   and then a trailing ``-p<K>``: ``spec-p2_run3.log`` and
+   ``spec_run1.log`` are both group ``spec``. A finished job counts its
+   runtime on the server, rounded up to whole minutes; a job not yet
+   finished counts ``--reserve-minutes`` (default 30) or its time so far
+   if larger, so it can end up costing more than it was counted at.
+   Finished jobs are cached in ``LOGS_DIR/.budget_cache.json``. With
+   ``--more-jobs K``, exits ``3`` unless ``K`` more jobs fit (one job and
+   ``--reserve-minutes`` each).
+
+   .. code-block:: bash
+
+      prover-cli --budget certora/logs --more-jobs 3
 
 Filters for Listing Commands
 ----------------------------
