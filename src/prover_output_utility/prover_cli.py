@@ -24,7 +24,7 @@ from .group_summary import build_group_summary, extract_group_id, format_text as
 from .models import CalltraceInfo, CheckResult, ParsedAlert
 from .sighash import handle_sighash_command
 from .verdicts import format_verdicts_text, job_verdicts
-from .wait import format_wait_text, wait_for_targets
+from .wait import format_wait_text, wait_for_jobs
 
 #: Exit code of ``--budget --more-jobs K`` when K more jobs do not fit.
 OVER_BUDGET = 3
@@ -136,10 +136,10 @@ Examples:
   %(prog)s --job-id 12345 --verdicts --save-report report.json
   %(prog)s --cancel 12345 67890
 
-  # Waiting for jobs, and a budget over certoraRun logs
-  %(prog)s --wait 'certora/logs/spec-p*_run3.log' --pid-file certora/logs/spec_run3.pid --timeout 90
-  %(prog)s --wait 12345 67890 --timeout 480
-  %(prog)s --budget certora/logs --more-jobs 3
+  # Waiting for jobs, and a budget over a group of jobs
+  %(prog)s --wait 12345 "https://prover.certora.com/output/..." --timeout 90
+  %(prog)s --budget --group-id GROUP --max-jobs 500 --max-minutes 5000 --more-jobs 3
+  %(prog)s --budget --budget-file budget.json --more-jobs 3
 
   # Group summary
   %(prog)s --group-id b78ea54a-a924-4f05-b1a7-58b29c1585ae
@@ -198,17 +198,9 @@ Environment Variables:
     job_group.add_argument(
         "--wait",
         nargs="+",
-        metavar="TARGET",
-        help="Wait until these jobs have stopped, for at most --timeout seconds. A target is a job "
-        "id, a job link, or a certoraRun log (*.log, read for the last job link it printed), or a "
-        "quoted glob of logs. Prints one line per job and then ENDED or RUNNING.",
-    )
-    job_group.add_argument(
-        "--budget",
-        metavar="LOGS_DIR",
-        help="Prover jobs and minutes used by the job links in LOGS_DIR/*.log, per log group, "
-        "against --max-jobs/--max-minutes or LOGS_DIR/budget.json ({\"jobs\": N, \"minutes\": M}). "
-        f"With --more-jobs K, exits {OVER_BUDGET} when K more jobs do not fit.",
+        metavar="JOB",
+        help="Wait until these jobs (ids or links) have stopped, for at most --timeout seconds. "
+        "Prints one line per job and then ENDED or RUNNING.",
     )
 
     parser.add_argument("--output", "-o", help="Output JSON file path")
@@ -292,9 +284,17 @@ Environment Variables:
         help="Seconds between checks while --wait waits (default: 30).",
     )
     parser.add_argument(
-        "--pid-file",
-        help="Used with --wait: the pid of the process submitting the logged jobs. While it runs, "
-        "a log with no job link is SUBMITTING and the wait does not end.",
+        "--budget",
+        action="store_true",
+        help="Prover jobs and minutes used by the cloud jobs of a group (--group-id, or "
+        "group_id in --budget-file), against --max-jobs/--max-minutes or the budget file. "
+        f"With --more-jobs K, exits {OVER_BUDGET} when K more jobs do not fit.",
+    )
+    parser.add_argument(
+        "--budget-file",
+        metavar="FILE",
+        help='Used with --budget: a JSON file {"jobs": N, "minutes": M, "group_id": G}; flags '
+        "given on the command line take precedence.",
     )
     parser.add_argument("--max-jobs", type=int, help="Job budget for --budget.")
     parser.add_argument("--max-minutes", type=int, help="Minute budget for --budget.")
@@ -413,8 +413,8 @@ Environment Variables:
             )
             sys.exit(1)
 
-    # Handle --group-id (after auth check, doesn't need job input)
-    if args.group_id:
+    # Handle --group-id (after auth check, doesn't need job input; --budget reads it itself)
+    if args.group_id and not args.budget:
         try:
             group_id = extract_group_id(args.group_id)
             api = ProverOutputAPI(use_local=False)
@@ -481,13 +481,11 @@ Environment Variables:
             print(f"❌ API error: {e}", file=sys.stderr)
             sys.exit(1)
 
-    # Handle --wait (after auth check; its targets are jobs or certoraRun logs)
+    # Handle --wait (after auth check)
     if args.wait:
         try:
             api = ProverOutputAPI(use_local=False)
-            result = wait_for_targets(
-                api, args.wait, timeout=args.timeout, interval=args.interval, pid_file=args.pid_file
-            )
+            result = wait_for_jobs(api, args.wait, timeout=args.timeout, interval=args.interval)
             if args.output:
                 with open(args.output, "w") as f:
                     json.dump(result.to_dict(), f, indent=2)
@@ -501,24 +499,30 @@ Environment Variables:
             print(f"❌ Authentication failed: {e}", file=sys.stderr)
             sys.exit(1)
 
-    # Handle --budget (after auth check; reads certoraRun logs)
+    # Handle --budget (after auth check; reads the group's jobs from the data API)
     if args.budget:
-        logs = Path(args.budget)
-        limits = {}
-        budget_file = logs / "budget.json"
-        if budget_file.exists():
-            limits = json.loads(budget_file.read_text())
+        limits = json.loads(Path(args.budget_file).read_text()) if args.budget_file else {}
+        group_id = args.group_id or limits.get("group_id")
         max_jobs = args.max_jobs if args.max_jobs is not None else limits.get("jobs")
         max_minutes = args.max_minutes if args.max_minutes is not None else limits.get("minutes")
-        if max_jobs is None or max_minutes is None:
-            parser.error(f"--budget needs --max-jobs and --max-minutes, or {budget_file}")
+        if not group_id or max_jobs is None or max_minutes is None:
+            parser.error("--budget needs a group id and both limits, from flags or --budget-file")
         try:
             api = ProverOutputAPI(use_local=False)
             usage = budget_usage(
-                api, logs, max_jobs, max_minutes, reserve=args.reserve_minutes, more_jobs=args.more_jobs
+                api,
+                extract_group_id(group_id),
+                max_jobs,
+                max_minutes,
+                reserve=args.reserve_minutes,
+                more_jobs=args.more_jobs,
+                days_back=args.days_back,
             )
         except AuthenticationError as e:
             print(f"❌ Authentication failed: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ProverAPIError as e:
+            print(f"❌ API error: {e}", file=sys.stderr)
             sys.exit(1)
         if args.output:
             with open(args.output, "w") as f:

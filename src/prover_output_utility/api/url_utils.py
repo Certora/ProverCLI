@@ -28,21 +28,6 @@ def _job_id_from_uuid(value: str) -> Optional[str]:
         return None
 
 
-#: The two shapes of a job link certoraRun prints: an app link (``/orgs/<org>/jobs/<uuid>``) and the
-#: legacy ``/output/<user>/<id>`` link.
-_JOB_LINK = re.compile(r"/jobs/([0-9a-fA-F-]{36})|/output/[0-9]+/([0-9a-fA-F]{32})")
-
-
-def find_job_ids(text: str) -> list[str]:
-    """Every job id linked in ``text`` (e.g. a certoraRun log), in order, as 32 hex characters."""
-    ids = []
-    for app, legacy in _JOB_LINK.findall(text):
-        job_id = _job_id_from_uuid(app) if app else legacy.lower()
-        if job_id is not None:
-            ids.append(job_id)
-    return ids
-
-
 def extract_job_id(job_input: str) -> str:
     """
     Extract job ID from either a URL or direct job ID.

@@ -9,6 +9,11 @@ The verdicts are the job's leaf checks: one per method of a parametric rule or i
 per assertion. A rule's top-level node only summarizes them. It can read ERROR while one of its
 methods is VIOLATED, or VIOLATED while other methods are SANITY_FAILED, and it carries no
 counterexample file, so the leaves are what to read.
+
+A failed vacuity check (``rule_not_vacuous``, status SANITY_FAILED) is a verdict too. For a method
+of a parametric rule the prover also marks the method SANITY_FAILED, but for a rule split into
+sub-checks (a ``satisfy``, auto-generated assertions) the vacuity check is the only place it shows,
+so it is added as a leaf of its own wherever its rule or method is not already SANITY_FAILED.
 """
 
 from __future__ import annotations
@@ -19,15 +24,32 @@ from typing import Any, Dict, List, Optional
 
 from .counterexample import TRACE_SHAPES, render_counterexample
 from .job_report import JobReport
-from .models import CheckResult
+from .models import CheckResult, NodeStatus, NodeType
+
+VACUITY_CHECK = "rule_not_vacuous"
+
+
+def _failed_vacuity_checks(api: Any, job_input: str, leaves: List[CheckResult]) -> List[CheckResult]:
+    """The failed vacuity checks no leaf already reports as SANITY_FAILED."""
+    reported = {(c.rule_name, c.method_name) for c in leaves if c.status == NodeStatus.SANITY_FAILED}
+    return [
+        c
+        for c in api.get_all_checks(job_input, include_rule_not_vacuous=True)
+        if c.node_type == NodeType.SANITY
+        and c.assert_message == VACUITY_CHECK
+        and c.status == NodeStatus.SANITY_FAILED
+        and (c.rule_name, c.method_name) not in reported
+    ]
 
 
 @dataclass
 class RuleVerdicts:
-    """One rule's leaf statuses counted, and the leaves that are not VERIFIED."""
+    """One rule's leaf statuses counted, and the leaves worth naming: none when every leaf is
+    VERIFIED; otherwise every leaf that is not, plus the VERIFIED ones that are not methods (a
+    rule's sub-checks, which the counts alone would leave unnamed)."""
 
     counts: Dict[str, int] = field(default_factory=dict)
-    not_verified: List[CheckResult] = field(default_factory=list)
+    leaves: List[CheckResult] = field(default_factory=list)
 
 
 @dataclass
@@ -54,9 +76,9 @@ class JobVerdicts:
             "rules": {
                 name: {
                     "counts": r.counts,
-                    "not_verified": [
+                    "leaves": [
                         {"method": c.method_name, "status": c.status.value, "assert": c.assert_message}
-                        for c in r.not_verified
+                        for c in r.leaves
                     ],
                 }
                 for name, r in self.rules.items()
@@ -70,16 +92,18 @@ def job_verdicts(api: Any, job_input: str, chain: str) -> JobVerdicts:
     """Read the job's leaf checks and render the counterexample of every violated one."""
     shape = TRACE_SHAPES[chain]
     leaves: List[CheckResult] = api.get_leaf_checks(job_input)
+    leaves += _failed_vacuity_checks(api, job_input, leaves)
     result = JobVerdicts(job_id=job_input, report=api.get_job_report(job_input))
 
-    counts: Dict[str, Counter] = {}
+    by_rule: Dict[str, List[CheckResult]] = {}
     for leaf in leaves:
-        counts.setdefault(leaf.rule_name, Counter())[leaf.status.value] += 1
-        rule = result.rules.setdefault(leaf.rule_name, RuleVerdicts())
-        if not leaf.is_verified:
-            rule.not_verified.append(leaf)
-    for name, c in counts.items():
-        result.rules[name].counts = dict(c.most_common())
+        by_rule.setdefault(leaf.rule_name, []).append(leaf)
+    for name, rule_leaves in by_rule.items():
+        failed = any(not c.is_verified for c in rule_leaves)
+        result.rules[name] = RuleVerdicts(
+            counts=dict(Counter(c.status.value for c in rule_leaves).most_common()),
+            leaves=[c for c in rule_leaves if not c.is_verified or (failed and not c.method_name)],
+        )
 
     seen = set()
     for leaf in leaves:
@@ -99,12 +123,12 @@ def job_verdicts(api: Any, job_input: str, chain: str) -> JobVerdicts:
 
 
 def format_verdicts_text(verdicts: JobVerdicts) -> str:
-    """One line per rule with its leaf statuses counted, a line per leaf that is not VERIFIED, then
-    each counterexample."""
+    """One line per rule with its leaf statuses counted, a line per listed leaf, then each
+    counterexample."""
     lines = [f"job {verdicts.report.job_status.value}"]
     for name, rule in verdicts.rules.items():
         lines.append(name + "\t" + ", ".join(f"{s} {n}" for s, n in rule.counts.items()))
-        for leaf in rule.not_verified:
+        for leaf in rule.leaves:
             where = leaf.method_name or leaf.assert_message or ""
             if where and where != name:
                 lines.append(f"\t{where}\t{leaf.status.value}")

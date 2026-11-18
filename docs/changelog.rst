@@ -16,13 +16,12 @@ Added
   checks, with every violation's counterexample rendered as compact XML
   (``prover_output_utility.counterexample``); ``--save-report FILE`` also
   writes them and the full report as JSON.
-- ``prover-cli --wait TARGET ...`` — a bounded wait over job ids, job links
-  or ``certoraRun`` logs, ending when every job has stopped.
-- ``prover-cli --budget LOGS_DIR`` — prover jobs and minutes used by the
-  jobs in a directory of ``certoraRun`` logs, per log group, against a
-  budget; with ``--more-jobs K``, exit ``3`` unless ``K`` more jobs fit.
-- ``url_utils.find_job_ids`` — the job ids linked in a text such as a
-  ``certoraRun`` log.
+- ``prover-cli --wait JOB ...`` — a bounded wait over job ids or links,
+  ending when every job has stopped.
+- ``prover-cli --budget`` — prover jobs and minutes used by a group's
+  cloud jobs (``--group-id`` or ``--budget-file``), against a budget, per
+  ``msg`` prefix; with ``--more-jobs K``, exit ``3`` unless ``K`` more
+  jobs fit.
 - ``JobStatus.is_final`` — whether a job has stopped.
 - ``prover-cli --download-sources [DEST_DIR]`` flag — download a job's source
   files into ``DEST_DIR/inputs/.certora_sources/`` (parallel per-file fetch,
