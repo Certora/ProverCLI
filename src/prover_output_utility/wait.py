@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .api.url_utils import find_job_ids
+from .api.url_utils import extract_job_id, find_job_ids
 
 SUBMITTING = "SUBMITTING"
 NOT_SUBMITTED = "NOT_SUBMITTED"
@@ -75,7 +75,13 @@ def check_targets(api: Any, targets: List[str], pid_file: Optional[str] = None) 
     submitting = _alive(pid_file)
     rows: List[WaitRow] = []
     for target in targets:
-        if _is_glob(target):
+        if target.startswith(("http://", "https://")):
+            try:
+                job_id = extract_job_id(target)
+            except Exception:
+                job_id = target  # not a job link: its status lookup fails as CHECK_FAILED
+            rows.append(WaitRow(target, job_id, "", final=False))
+        elif _is_glob(target):
             matches = sorted(glob.glob(target))
             if not matches:
                 rows.append(_log_row(Path(target), submitting))
