@@ -66,9 +66,10 @@ EVM_TRACE = TraceShape(
 #: Solana traces are dominated by account materialization under
 #: ``cvlr_deserialize_nondet_accounts``. That subtree is elided rather than dropped, so a reader can
 #: tell setup happened and how much of it was hidden. ``unknown loop source code`` is kept: a
-#: loop-unwinding violation nests its failure under it.
+#: loop-unwinding violation nests its failure under it. rustc 1.89 and later name the allocator shim
+#: ``__rustc::__rust_alloc``, so both spellings are dropped.
 SOLANA_TRACE = TraceShape(
-    dropped=_GENERIC_NOISE | {"__rust_alloc: {}", "CVT_alloc_slice: {}"},
+    dropped=_GENERIC_NOISE | {"__rust_alloc: {}", "__rustc::__rust_alloc: {}", "CVT_alloc_slice: {}"},
     elided=frozenset({"cvlr_solana::layout::cvlr_deserialize_nondet_accounts(...)"}),
 )
 
