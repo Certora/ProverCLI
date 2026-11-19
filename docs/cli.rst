@@ -92,6 +92,35 @@ action flag) returns the violated rules.
 
    Leaf checks only — actual assertions.
 
+.. option:: --verdicts
+
+   The job's verdicts rule by rule, read from its leaf checks: one per
+   method of a parametric rule or invariant, and one per assertion. A
+   rule's top-level node only summarizes them; it can read ``ERROR`` while
+   a method is ``VIOLATED``, and it carries no counterexample. A failed
+   vacuity check (``rule_not_vacuous``) counts as a ``SANITY_FAILED`` leaf
+   where its rule or method is not already marked so. Text output prints
+   one line per rule with its leaf statuses counted; for a rule with a leaf
+   that is not ``VERIFIED``, a line for each such leaf and for each of its
+   sub-checks that are not methods; and then every violated leaf's
+   counterexample rendered as ``<counterexample>`` XML (failing assert,
+   ``file:line``, and the call trace with values filled in). The JSON form
+   (``--format json`` or ``--output``) also holds the full ``--full-report``
+   content. Works with ``--local-path`` too.
+
+.. option:: --save-report FILE
+
+   With ``--verdicts``: print the verdicts as text and also write the JSON
+   form to ``FILE``.
+
+   .. code-block:: bash
+
+      prover-cli --job-id JOB --verdicts --save-report certora/logs/part1.report.json
+
+.. option:: --chain {evm,solana,soroban}
+
+   Which call-trace frames a counterexample keeps (default ``evm``).
+
 .. option:: --calltrace FILE
 
    Calltrace for the specific output file path (e.g.
@@ -163,6 +192,41 @@ These do not take a job-input flag:
 
       prover-cli --sighash "transfer(address,uint256)"
       prover-cli --sighash "0xa9059cbb"
+
+.. option:: --wait JOB [JOB ...]
+
+   Wait until every job (id or link) has stopped, for at most ``--timeout``
+   seconds (default 90), checking every ``--interval`` seconds (default
+   30). Prints ``<job> <status>`` per job, then ``ENDED`` or ``RUNNING``.
+   A job has stopped when its status is ``SUCCEEDED``, ``FAILED``,
+   ``CANCELED``, ``HALTED``, ``SERVICE_UNAVAILABLE`` or ``UPLOAD_FAILED``.
+   ``CHECK_FAILED`` means the status request failed and does not end the
+   wait. Keep ``--timeout`` under the timeout of whatever runs the
+   command, and call it again on ``RUNNING``.
+
+   .. code-block:: bash
+
+      prover-cli --wait JOB1 JOB2 --timeout 90
+
+.. option:: --budget
+
+   Prover jobs and minutes used by the cloud jobs of a group
+   (``certoraRun --group_id``), read from the data API in one request,
+   against ``--max-jobs``/``--max-minutes``. The group and the limits can
+   come from ``--group-id`` and the flags, or from ``--budget-file FILE``
+   holding ``{"jobs": N, "minutes": M, "group_id": G}``; flags take
+   precedence. A finished job counts its runtime on the server, rounded up
+   to whole minutes; a job not yet finished counts ``--reserve-minutes``
+   (default 30) or its time so far if larger, so it can end up costing
+   more than it was counted at. The use is also broken down by the first
+   word of each job's ``msg``. A job submitted moments ago may not be
+   listed yet. With ``--more-jobs K``, exits ``3`` unless ``K`` more jobs
+   fit (one job and ``--reserve-minutes`` each).
+
+   .. code-block:: bash
+
+      prover-cli --budget --group-id GROUP --max-jobs 500 --max-minutes 5000 --more-jobs 3
+      prover-cli --budget --budget-file budget.json --more-jobs 3
 
 Filters for Listing Commands
 ----------------------------

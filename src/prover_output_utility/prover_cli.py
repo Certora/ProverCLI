@@ -17,10 +17,17 @@ from pathlib import Path
 
 from .api import ProverOutputAPI
 from .breadcrumb import format_breadcrumbs_text
+from .budget import budget_usage, format_budget_text
+from .counterexample import TRACE_SHAPES
 from .exceptions import AuthenticationError, JobNotFoundError, ProverAPIError
 from .group_summary import build_group_summary, extract_group_id, format_text as format_group_text
 from .models import CalltraceInfo, CheckResult, ParsedAlert
 from .sighash import handle_sighash_command
+from .verdicts import format_verdicts_text, job_verdicts
+from .wait import format_wait_text, wait_for_jobs
+
+#: Exit code of ``--budget --more-jobs K`` when K more jobs do not fit.
+OVER_BUDGET = 3
 
 
 def format_check_result(check_result: CheckResult, index: int) -> str:
@@ -126,7 +133,13 @@ Examples:
   %(prog)s --job-id 12345 --full-report
   %(prog)s --job-id 12345 --full-report --format json
   %(prog)s --job-id 12345 --download-sources ./job_sources
+  %(prog)s --job-id 12345 --verdicts --save-report report.json
   %(prog)s --cancel 12345 67890
+
+  # Waiting for jobs, and a budget over a group of jobs
+  %(prog)s --wait 12345 "https://prover.certora.com/output/..." --timeout 90
+  %(prog)s --budget --group-id GROUP --max-jobs 500 --max-minutes 5000 --more-jobs 3
+  %(prog)s --budget --budget-file budget.json --more-jobs 3
 
   # Group summary
   %(prog)s --group-id b78ea54a-a924-4f05-b1a7-58b29c1585ae
@@ -182,6 +195,13 @@ Environment Variables:
         help="List recent jobs from the data API. "
         "Use --days-back, --limit, --my-jobs-only to refine.",
     )
+    job_group.add_argument(
+        "--wait",
+        nargs="+",
+        metavar="JOB",
+        help="Wait until these jobs (ids or links) have stopped, for at most --timeout seconds. "
+        "Prints one line per job and then ENDED or RUNNING.",
+    )
 
     parser.add_argument("--output", "-o", help="Output JSON file path")
     parser.add_argument("--status-only", action="store_true", help="Only get job status")
@@ -232,6 +252,65 @@ Environment Variables:
             "(DEST_DIR defaults to the current directory). Files are fetched "
             "individually in parallel; a completed fetch is skipped on rerun."
         ),
+    )
+    parser.add_argument(
+        "--verdicts",
+        action="store_true",
+        help="The job's verdicts rule by rule, from its leaf checks (one per method and per "
+        "assertion), with a rendered counterexample for every violation.",
+    )
+    parser.add_argument(
+        "--save-report",
+        metavar="FILE",
+        help="Used with --verdicts: also write the verdicts, counterexamples and full job report "
+        "to FILE as JSON, and still print the verdicts.",
+    )
+    parser.add_argument(
+        "--chain",
+        choices=sorted(TRACE_SHAPES),
+        default="evm",
+        help="Which frames a counterexample keeps (default: evm). Used with --verdicts.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=90,
+        help="Seconds --wait waits at most (default: 90).",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=30,
+        help="Seconds between checks while --wait waits (default: 30).",
+    )
+    parser.add_argument(
+        "--budget",
+        action="store_true",
+        help="Prover jobs and minutes used by the cloud jobs of a group (--group-id, or "
+        "group_id in --budget-file), against --max-jobs/--max-minutes or the budget file. "
+        f"With --more-jobs K, exits {OVER_BUDGET} when K more jobs do not fit.",
+    )
+    parser.add_argument(
+        "--budget-file",
+        metavar="FILE",
+        help='Used with --budget: a JSON file {"jobs": N, "minutes": M, "group_id": G}; flags '
+        "given on the command line take precedence.",
+    )
+    parser.add_argument("--max-jobs", type=int, help="Job budget for --budget.")
+    parser.add_argument("--max-minutes", type=int, help="Minute budget for --budget.")
+    parser.add_argument(
+        "--reserve-minutes",
+        type=int,
+        default=30,
+        help="Minutes --budget counts for a job that has not finished (or its time so far, if "
+        "larger), and for each of --more-jobs (default: 30).",
+    )
+    parser.add_argument(
+        "--more-jobs",
+        type=int,
+        default=0,
+        metavar="K",
+        help=f"Used with --budget: exit {OVER_BUDGET} unless K more jobs fit.",
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--format", choices=["json", "text"], default="text", help="Output format")
@@ -334,8 +413,8 @@ Environment Variables:
             )
             sys.exit(1)
 
-    # Handle --group-id (after auth check, doesn't need job input)
-    if args.group_id:
+    # Handle --group-id (after auth check, doesn't need job input; --budget reads it itself)
+    if args.group_id and not args.budget:
         try:
             group_id = extract_group_id(args.group_id)
             api = ProverOutputAPI(use_local=False)
@@ -402,10 +481,65 @@ Environment Variables:
             print(f"❌ API error: {e}", file=sys.stderr)
             sys.exit(1)
 
+    # Handle --wait (after auth check)
+    if args.wait:
+        try:
+            api = ProverOutputAPI(use_local=False)
+            result = wait_for_jobs(api, args.wait, timeout=args.timeout, interval=args.interval)
+            if args.output:
+                with open(args.output, "w") as f:
+                    json.dump(result.to_dict(), f, indent=2)
+                print(f"{'ENDED' if result.ended else 'RUNNING'}. Results written to {args.output}")
+            elif args.format == "json":
+                print(json.dumps(result.to_dict(), indent=2))
+            else:
+                print(format_wait_text(result))
+            return
+        except AuthenticationError as e:
+            print(f"❌ Authentication failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Handle --budget (after auth check; reads the group's jobs from the data API)
+    if args.budget:
+        limits = json.loads(Path(args.budget_file).read_text()) if args.budget_file else {}
+        group_id = args.group_id or limits.get("group_id")
+        max_jobs = args.max_jobs if args.max_jobs is not None else limits.get("jobs")
+        max_minutes = args.max_minutes if args.max_minutes is not None else limits.get("minutes")
+        if not group_id or max_jobs is None or max_minutes is None:
+            parser.error("--budget needs a group id and both limits, from flags or --budget-file")
+        try:
+            api = ProverOutputAPI(use_local=False)
+            usage = budget_usage(
+                api,
+                extract_group_id(group_id),
+                max_jobs,
+                max_minutes,
+                reserve=args.reserve_minutes,
+                more_jobs=args.more_jobs,
+                days_back=args.days_back,
+            )
+        except AuthenticationError as e:
+            print(f"❌ Authentication failed: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ProverAPIError as e:
+            print(f"❌ API error: {e}", file=sys.stderr)
+            sys.exit(1)
+        if args.output:
+            with open(args.output, "w") as f:
+                json.dump(usage.to_dict(), f, indent=2)
+            print(f"{usage.left_jobs} jobs, {usage.left_minutes} min left. Results written to {args.output}")
+        elif args.format == "json":
+            print(json.dumps(usage.to_dict(), indent=2))
+        else:
+            print(format_budget_text(usage))
+        if args.more_jobs and not usage.fits:
+            sys.exit(OVER_BUDGET)
+        return
+
     # Check that we have a job input (unless it's who-am-i or sighash which were handled above)
     if not args.cancel and not (args.job_id or args.job_url or args.local_path):
         parser.error(
-            "Please provide either --job-id, --job-url, --local-path, --cancel, --group-id, --sighash, --recent-jobs, or --who-am-i"
+            "Please provide either --job-id, --job-url, --local-path, --cancel, --group-id, --sighash, --recent-jobs, --wait, --budget, or --who-am-i"
         )
 
     # Handle cancel case differently since it takes multiple inputs
@@ -432,6 +566,16 @@ Environment Variables:
                 "jobs": job_inputs,
                 "result": cancel_result,
             }
+
+        elif args.verdicts:
+            verdicts = job_verdicts(api, job_input, chain=args.chain)
+            result = verdicts.to_dict()
+            if args.save_report:
+                with open(args.save_report, "w") as f:
+                    json.dump(result, f, indent=1)
+            if not args.output and args.format != "json":
+                print(format_verdicts_text(verdicts))
+                return
 
         elif args.status_only:
             # Just get job status
@@ -557,6 +701,8 @@ Environment Variables:
                 print(f"Found {count} alerts. Results written to {args.output}")
             elif args.full_report:
                 print(f"✅ Full report retrieved. Results written to {args.output}")
+            elif args.verdicts:
+                print(f"Verdicts for {len(result['rules'])} rules. Results written to {args.output}")
             elif args.download_sources:
                 print(
                     f"Downloaded {result['files_count']} source files to {result['sources_dir']}. "

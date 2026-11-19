@@ -62,6 +62,23 @@ class JobStatus(str, Enum):
     # Unknown status (fallback for unrecognized values)
     UNKNOWN = "UNKNOWN"
 
+    @property
+    def is_final(self) -> bool:
+        """Whether the job has stopped: its verdicts are final, or it ended without a result."""
+        return self in _FINAL_JOB_STATUSES
+
+
+_FINAL_JOB_STATUSES = frozenset(
+    {
+        JobStatus.SUCCEEDED,
+        JobStatus.FAILED,
+        JobStatus.CANCELED,
+        JobStatus.HALTED,
+        JobStatus.SERVICE_UNAVAILABLE,
+        JobStatus.UPLOAD_FAILED,
+    }
+)
+
 
 class NodeType(str, Enum):
     """Type of a tree view node."""

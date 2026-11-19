@@ -37,6 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "build>=1.0",
+    "pytest>=8.0",
     "reuse>=5.0",
 ]
 
