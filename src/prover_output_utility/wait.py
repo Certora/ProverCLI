@@ -48,14 +48,15 @@ def check_jobs(api: Any, jobs: List[str]) -> List[WaitRow]:
 
 def wait_for_jobs(api: Any, jobs: List[str], timeout: float, interval: float = 30) -> WaitResult:
     """Check the jobs every ``interval`` seconds until every one has stopped or ``timeout`` seconds
-    have passed. ``ended`` says which."""
+    have passed, with a last check at the deadline. ``ended`` says which."""
     deadline = time.monotonic() + timeout
     while True:
         rows = check_jobs(api, jobs)
         ended = all(r.final for r in rows)
-        if ended or time.monotonic() + interval > deadline:
+        remaining = deadline - time.monotonic()
+        if ended or remaining <= 0:
             return WaitResult(ended=ended, jobs=rows)
-        time.sleep(interval)
+        time.sleep(min(interval, remaining))
 
 
 def format_wait_text(result: WaitResult) -> str:
